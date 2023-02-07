@@ -1,0 +1,5 @@
+*.jpg
+data
+__pycache__
+runs
+.vscode
