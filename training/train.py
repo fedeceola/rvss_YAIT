@@ -37,7 +37,7 @@ def main(args):
     device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
 
     # Create network
-    net = Net(args.feat_vect_dim)
+    net = Net(args.feat_vect_dim, args.sigmoid_offset)
     net.to(device)
 
     # Define loss and optim

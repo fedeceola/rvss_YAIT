@@ -23,6 +23,6 @@ class Net(nn.Module):
         x = F.relu(self.fc1(x))
         x = F.relu(self.fc2(x))
         x = self.fc3(x)
-        x = F.sigmoid(x)
-        x += self.sigmoid_offset
+        x = torch.sigmoid(x)
+        x = x + self.sigmoid_offset
         return x
