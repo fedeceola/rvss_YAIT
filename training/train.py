@@ -18,16 +18,28 @@ from training.steerDS import SteerDataSet
 
 
 def main(args):
-    # Load data
+    transform = {}
     if args.model_name == "Net":
-        transform = transforms.Compose([
+        transform["train"] = transforms.Compose([
+            transforms.ToTensor(),
+            transforms.Normalize(
+                (0.5, 0.5, 0.5), (0.5, 0.5, 0.5)
+            )
+        ])
+        transform["val"] = transforms.Compose([
             transforms.ToTensor(),
             transforms.Normalize(
                 (0.5, 0.5, 0.5), (0.5, 0.5, 0.5)
             )
         ])
     elif args.model_name == "mobilenet_v2":
-        transform = transforms.Compose([
+        transform["train"] = transforms.Compose([
+            transforms.ToTensor(),
+            transforms.Normalize(
+                mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]
+            )
+        ])
+        transform["val"] = transforms.Compose([
             transforms.ToTensor(),
             transforms.Normalize(
                 mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]
@@ -36,6 +48,7 @@ def main(args):
     else:
         raise NotImplementedError
 
+    # Load data
     ds = SteerDataSet(
         os.path.join(os.getcwd(), "data"),
         args.crop_ratio,
@@ -54,7 +67,7 @@ def main(args):
     device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
 
     # Create network
-    net = load_model(args.model_name, args.feat_vect_dim)
+    net = load_model(args.model_name, args.feat_vect_dim, args.use_avg_pool)
     net.to(device)
 
     # Define loss and optim
@@ -87,6 +100,7 @@ def main(args):
             is_training = True if p == "train" else False
 
             net.train(is_training)
+            dataloader[p].dataset.dataset.phase = p
             with torch.set_grad_enabled(is_training):
 
                 for i, data in enumerate(dataloader[p], start=1):
@@ -166,6 +180,7 @@ if __name__ == "__main__":
     parser.add_argument("--train_split", type=float, default=0.7)
     parser.add_argument("--num_epochs", type=int, default=5)
     parser.add_argument("--feat_vect_dim", type=int, default=48048)
+    parser.add_argument("--use_avg_pool", action="store_true")
     parser.add_argument("--min_max_boundaries", type=str, default="-0.5,0.5")
     parser.add_argument("--model_name", type=str, default="Net")
     parser.add_argument("--seed", type=int, default=10)

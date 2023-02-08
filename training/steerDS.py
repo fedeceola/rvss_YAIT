@@ -16,11 +16,15 @@ class SteerDataSet(Dataset):
         self.img_ext = img_ext        
         self.filenames = glob(path.join(self.root_folder,"*/*" + self.img_ext))
         self.totensor = transforms.ToTensor()
+        # set this in the training loop, at each epoch for each phase
+        self.phase = None
         
     def __len__(self):        
         return len(self.filenames)
     
     def __getitem__(self,idx):
+        assert self.phase in ["train", "val"]
+
         f = self.filenames[idx]        
         img = cv2.imread(f)
         
@@ -31,14 +35,15 @@ class SteerDataSet(Dataset):
         steering = f.split("/")[-1].split(self.img_ext)[0][6:]
         steering = np.float32(steering)        
 
-        if torch.randint(0, 2, (1,)).item():
-            img = cv2.flip(img, 1)
-            steering *= np.array(-1, dtype=steering.dtype)
+        if self.phase == "train":
+            if torch.randint(0, 2, (1,)).item():
+                img = cv2.flip(img, 1)
+                steering *= np.array(-1, dtype=steering.dtype)
 
         if self.transform == None:
             img = self.totensor(img)
         else:
-            img = self.transform(img)   
+            img = self.transform[self.phase](img)   
         
         sample = {"image":img , "steering":steering}        
         
