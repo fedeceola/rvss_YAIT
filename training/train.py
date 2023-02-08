@@ -37,7 +37,7 @@ def main(args):
     device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
 
     # Create network
-    net = Net(args.feat_vect_dim, args.sigmoid_offset)
+    net = Net(args.feat_vect_dim)
     net.to(device)
 
     # Define loss and optim
@@ -57,6 +57,7 @@ def main(args):
     for epoch in range(args.num_epochs):  # loop over the dataset multiple times
 
         loss_epoch = {p: 0 for p in phases}
+        loss_clipped_epoch = {p: 0 for p in phases}
         for p in phases:
 
             is_training = True if p == "train" else False
@@ -78,6 +79,12 @@ def main(args):
                         outputs = outputs.unsqueeze(dim=0)
                     loss = criterion(outputs, labels)
 
+                    outputs_clipped = torch.clip(
+                        outputs, min=float(args.min_bound), max=float(args.max_bound)
+                    )
+                    loss_clipped = criterion(outputs_clipped, labels)
+                    loss_clipped_epoch[p] += loss_clipped.item() * b_size
+
                     if is_training:
                         loss.backward()
                         optimizer.step()
@@ -87,6 +94,11 @@ def main(args):
             writer.add_scalars(
                 "Epoch_loss/train_val",
                 {p: loss_epoch[p] / len(dataloader[p].dataset)},
+                epoch
+            )
+            writer.add_scalars(
+                "Epoch_clipped_loss/train_val",
+                {p: loss_clipped_epoch[p] / len(dataloader[p].dataset)},
                 epoch
             )
 
@@ -107,10 +119,15 @@ if __name__ == "__main__":
     parser.add_argument("--train_split", type=float, default=0.7)
     parser.add_argument("--num_epochs", type=int, default=5)
     parser.add_argument("--feat_vect_dim", type=int, default=70224)
-    parser.add_argument("--sigmoid_offset", type=float, default=-0.5)
+    parser.add_argument("--min_max_boundaries", type=str, default="-0.5,0.5")
     args = parser.parse_args()
 
     assert args.train_split > 0 and args.train_split < 1
     args.val_split = 1 - args.train_split
+
+    assert len(args.min_max_boundaries.split(",")) == 2
+    args.min_bound = args.min_max_boundaries.split(",")[0]
+    args.max_bound = args.min_max_boundaries.split(",")[1]
+    assert args.min_bound < args.max_bound
 
     main(args)
