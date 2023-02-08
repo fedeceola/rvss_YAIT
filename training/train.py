@@ -56,6 +56,7 @@ def main(args):
     # Train NN
     for epoch in range(args.num_epochs):  # loop over the dataset multiple times
 
+        best_val_loss_clipped = sys.float_info.max
         loss_epoch = {p: 0 for p in phases}
         loss_clipped_epoch = {p: 0 for p in phases}
         for p in phases:
@@ -79,17 +80,30 @@ def main(args):
                         outputs = outputs.unsqueeze(dim=0)
                     loss = criterion(outputs, labels)
 
-                    outputs_clipped = torch.clip(
-                        outputs, min=float(args.min_bound), max=float(args.max_bound)
-                    )
-                    loss_clipped = criterion(outputs_clipped, labels)
-                    loss_clipped_epoch[p] += loss_clipped.item() * b_size
-
                     if is_training:
                         loss.backward()
                         optimizer.step()
 
                     loss_epoch[p] += loss.item() * b_size
+
+                    with torch.set_grad_enabled(False):
+                        # Log also clipped loss
+                        outputs_clipped = torch.clip(
+                            outputs, min=float(args.min_bound), max=float(args.max_bound)
+                        )
+                        loss_clipped = criterion(outputs_clipped, labels)
+                        loss_clipped_epoch[p] += loss_clipped.item() * b_size
+
+                        if loss_clipped < best_val_loss_clipped:
+                            best_val_loss_clipped = loss_clipped.item()
+                            torch.save(
+                                {
+                                    "epoch": epoch,
+                                    "loss_clipped": best_val_loss_clipped,
+                                    "model_state_dict": net.state_dict(),
+                                },
+                                os.path.join(writer.log_dir, "best_model.pth")
+                            )
 
             writer.add_scalars(
                 "Epoch_loss/train_val",
@@ -120,6 +134,7 @@ if __name__ == "__main__":
     parser.add_argument("--num_epochs", type=int, default=5)
     parser.add_argument("--feat_vect_dim", type=int, default=70224)
     parser.add_argument("--min_max_boundaries", type=str, default="-0.5,0.5")
+    parser.add_argument("--model_name", type=str, default="mobilenet_v2")
     args = parser.parse_args()
 
     assert args.train_split > 0 and args.train_split < 1
