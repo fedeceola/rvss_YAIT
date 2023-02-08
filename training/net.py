@@ -24,5 +24,5 @@ class Net(nn.Module):
         x = F.relu(self.fc2(x))
         x = self.fc3(x)
         x = F.sigmoid(x)
-        x -= self.sigmoid_offset
+        x += self.sigmoid_offset
         return x
