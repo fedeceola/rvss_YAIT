@@ -4,7 +4,7 @@ import torch.nn.functional as F
 
 
 class Net(nn.Module):
-    def __init__(self, feat_vect_dim):
+    def __init__(self, feat_vect_dim, sigmoid_offset):
         super().__init__()
         self.conv1 = nn.Conv2d(3, 6, 5)
         self.pool = nn.MaxPool2d(2, 2)
@@ -14,6 +14,8 @@ class Net(nn.Module):
         self.fc2 = nn.Linear(120, 84)
         self.fc3 = nn.Linear(84, 1)
 
+        self.sigmoid_offset = sigmoid_offset
+
     def forward(self, x):
         x = self.pool(F.relu(self.conv1(x)))
         x = self.pool(F.relu(self.conv2(x)))
@@ -21,4 +23,6 @@ class Net(nn.Module):
         x = F.relu(self.fc1(x))
         x = F.relu(self.fc2(x))
         x = self.fc3(x)
+        x = F.sigmoid(x)
+        x -= self.sigmoid_offset
         return x

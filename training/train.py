@@ -42,6 +42,7 @@ def main(args):
 
     # Define loss and optim
     criterion = nn.MSELoss()
+    # TODO switch to Adam?
     optimizer = optim.SGD(net.parameters(), lr=0.001, momentum=0.9)
 
     phases = ["train", "val"]
@@ -91,6 +92,7 @@ def main(args):
 
     # TODO save best validation loss model
     # TODO add sigmoid to scale output in -0.5 +0.5
+    # TODO create test.py testing pipeline
 
     print('Finished Training')
 
@@ -105,6 +107,7 @@ if __name__ == "__main__":
     parser.add_argument("--train_split", type=float, default=0.7)
     parser.add_argument("--num_epochs", type=int, default=5)
     parser.add_argument("--feat_vect_dim", type=int, default=70224)
+    parser.add_argument("--sigmoid_offset", type=float, default=-0.5)
     args = parser.parse_args()
 
     assert args.train_split > 0 and args.train_split < 1
